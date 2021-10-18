@@ -6,56 +6,56 @@ class Carousel {
    * @param {Object} options 
    * @param {Object} [options.slidesToScroll=1] Nombre d'éléments à faire défiler
    * @param {Object} [options.slidesVisible=1] Nombre d'éléments visible dans un slide
+   * @param {Object} [options.url="http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes"] url API
    * @param {Object} [options.pageNumberAPI=1] Numéro de page de la requête API
-   * @param {Object} [options.moviePositionAPI=1] Position du film au niveau de la page
-   * @param {boolean} [options.infinite=false] 
+   * @param {Object} [options.moviePositionAPI=0] Position du film au niveau de la page
    */
   constructor (element, options = {}) {
     this.element = element
     this.options = Object.assign({}, {
       slidesToScroll: 1,
       slidesVisible: 1,
+      url: "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes",
       pageNumberAPI: 1,
-      moviePositionAPI: 1,
-      infinite: false
+      moviePositionAPI: 0
     }, options)
-    let url = "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes"
-    this.callFetch(url).then(value => {
+    this.showCurrentItems()
+    }
+
+  /**
+   * Renvoie les films à afficher
+   */
+  showCurrentItems() {
+    this.callFetch(this.options.url).then(value => {
       let children = []
-      for (let iMovie = 0; iMovie < this.options.slidesVisible; iMovie++) {
-        let child = this.createDivWithClass("item")
-        let grandChild = child.appendChild(this.createDivWithClass("item__image"))
-        let newPicture = document.createElement("img")
-        newPicture.src = value.results[iMovie].image_url
-        grandChild.appendChild(newPicture)
-        children[iMovie] = child
+      for (let iSlide = 0; iSlide < this.options.slidesVisible; iSlide++) {
+        if (iSlide + this.options.moviePositionAPI < 5) {
+          children[iSlide] = this.setItem(value, iSlide, 0)
+          if (iSlide == this.options.slidesVisible - 1) {
+            this.setInstanceCarousel(children)
+          }
+        } else {
+          this.callFetch(value.next).then(value2 => {
+            if (iSlide + this.options.moviePositionAPI < 10) {
+              children[iSlide] = this.setItem(value2, iSlide, 5)
+              if (iSlide == this.options.slidesVisible - 1) {
+                this.setInstanceCarousel(children)
+            }
+            }
+            if (iSlide + this.options.moviePositionAPI >= 10) {
+              this.callFetch(value2.next).then(value3 => {
+                children[iSlide] = this.setItem(value3, iSlide, 10)
+                if (iSlide == this.options.slidesVisible - 1) {
+                  this.setInstanceCarousel(children)
+                }
+            })
+            }
+
+          })
+        }
       }
-      //let children = [].slice.call(element.children)
-      this.currentItem = 0
-      this.root = this.createDivWithClass("carousel")
-      this.container = this.createDivWithClass("carousel__container")
-      this.root.appendChild(this.container)
-      this.element.appendChild(this.root)
-      this.items = children.map((child) => {
-        let item = this.createDivWithClass("carousel__item")
-        item.appendChild(child)
-        return item
-      })
-      if (this.options.infinite) {
-        let offset = this.options.slidesVisible * 2 - 1
-        this.items = [
-          ...this.items.slice(this.items.length - offset).map(item => item.cloneNode(true)),
-          ...this.items,
-          ...this.items.slice(0, offset).map(item => item.cloneNode(true))
-        ]
-        this.currentItem = offset
-      }
-      this.items.forEach(item => this.container.appendChild(item))
-      this.setStyle()
-      this.createNavigation()
     })
   }
-
   /**
    * 
    * @param {string} url 
@@ -69,7 +69,41 @@ class Carousel {
       return console.log("Problem with fetch:" + err)
     }
   }
-  
+
+  /**
+   * Affiche le carrousel qui a été chargé
+   */
+  setInstanceCarousel(children) {
+    this.root = this.createDivWithClass("carousel")
+    this.container = this.createDivWithClass("carousel__container")
+    this.root.appendChild(this.container)
+    this.element.appendChild(this.root)
+    this.items = children.map((child) => {
+      let item = this.createDivWithClass("carousel__item")
+      item.appendChild(child)
+      return item
+    })
+    this.items.forEach(item => this.container.appendChild(item))
+    this.setStyle()
+    this.createNavigation()
+  }
+
+  /**
+   * Créé un item du carrousel
+   * @param {Object} value
+   * @param {Number} value
+   * @param {Number} removal Retrait afin de rester sur la page de l'API qui est lue 
+   * @returns {HTMLElement}
+   */
+  setItem (value, iSlide, removal) {
+    let child = this.createDivWithClass("item")
+    let grandChild = child.appendChild(this.createDivWithClass("item__image"))
+    let newPicture = document.createElement("img")
+    newPicture.src = value.results[iSlide + this.options.moviePositionAPI - removal].image_url
+    grandChild.appendChild(newPicture)
+    return child
+  }
+
   /**
    * Applique les bonnes dimensions aux éléments du carrousel
    */
@@ -90,12 +124,12 @@ class Carousel {
   }
 
   next () {
-    this.gotoItem(this.currentItem + this.options.slidesToScroll)
+    this.gotoItem(this.moviePositionAPI + this.options.slidesToScroll)
 
   }
 
   prev () {
-    this.gotoItem(this.currentItem - this.options.slidesToScroll)
+    this.gotoItem(this.moviePositionAPI - this.options.slidesToScroll)
   }
 
   /**
@@ -103,6 +137,7 @@ class Carousel {
    * @param {number} index 
    */
   gotoItem (index) {
+    
     let translateX = index * -100 / this.items.length
     this.container.style.transform = "translate3d(" + translateX + "%, 0, 0)"
     this.currentItem = index
@@ -124,10 +159,10 @@ class Carousel {
 document.addEventListener("DOMContentLoaded", function () {
   
   new Carousel(document.querySelector("#carousel1"), {
-    slidesVisible: 5,
-    slidesToScroll:2,
+    slidesVisible: 15,
+    slidesToScroll: 2,
     pageNumberAPI: 1,
-    moviePositionAPI: 1,
+    moviePositionAPI: 0,
     infinite: true
   })
   
