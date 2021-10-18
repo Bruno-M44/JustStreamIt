@@ -6,6 +6,8 @@ class Carousel {
    * @param {Object} options 
    * @param {Object} [options.slidesToScroll=1] Nombre d'éléments à faire défiler
    * @param {Object} [options.slidesVisible=1] Nombre d'éléments visible dans un slide
+   * @param {Object} [options.pageNumberAPI=1] Numéro de page de la requête API
+   * @param {Object} [options.moviePositionAPI=1] Position du film au niveau de la page
    * @param {boolean} [options.infinite=false] 
    */
   constructor (element, options = {}) {
@@ -13,33 +15,61 @@ class Carousel {
     this.options = Object.assign({}, {
       slidesToScroll: 1,
       slidesVisible: 1,
+      pageNumberAPI: 1,
+      moviePositionAPI: 1,
       infinite: false
     }, options)
-    let children = [].slice.call(element.children)
-    this.currentItem = 0
-    this.root = this.createDivWithClass("carousel")
-    this.container = this.createDivWithClass("carousel__container")
-    this.root.appendChild(this.container)
-    this.element.appendChild(this.root)
-    this.items = children.map((child) => {
-      let item = this.createDivWithClass("carousel__item")
-      item.appendChild(child)
-      return item
+    let url = "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes"
+    this.callFetch(url).then(value => {
+      let children = []
+      for (let iMovie = 0; iMovie < this.options.slidesVisible; iMovie++) {
+        let child = this.createDivWithClass("item")
+        let grandChild = child.appendChild(this.createDivWithClass("item__image"))
+        let newPicture = document.createElement("img")
+        newPicture.src = value.results[iMovie].image_url
+        grandChild.appendChild(newPicture)
+        children[iMovie] = child
+      }
+      //let children = [].slice.call(element.children)
+      this.currentItem = 0
+      this.root = this.createDivWithClass("carousel")
+      this.container = this.createDivWithClass("carousel__container")
+      this.root.appendChild(this.container)
+      this.element.appendChild(this.root)
+      this.items = children.map((child) => {
+        let item = this.createDivWithClass("carousel__item")
+        item.appendChild(child)
+        return item
+      })
+      if (this.options.infinite) {
+        let offset = this.options.slidesVisible * 2 - 1
+        this.items = [
+          ...this.items.slice(this.items.length - offset).map(item => item.cloneNode(true)),
+          ...this.items,
+          ...this.items.slice(0, offset).map(item => item.cloneNode(true))
+        ]
+        this.currentItem = offset
+      }
+      this.items.forEach(item => this.container.appendChild(item))
+      this.setStyle()
+      this.createNavigation()
     })
-    if (this.options.infinite) {
-      let offset = this.options.slidesVisible * 2 - 1
-      this.items = [
-        ...this.items.slice(this.items.length - offset).map(item => item.cloneNode(true)),
-        ...this.items,
-        ...this.items.slice(0, offset).map(item => item.cloneNode(true))
-      ]
-      this.currentItem = offset
-    }
-    this.items.forEach(item => this.container.appendChild(item))
-    this.setStyle()
-    this.createNavigation()
   }
 
+  /**
+   * 
+   * @param {string} url 
+   * @returns 
+   */
+  async callFetch(url) {
+    try {
+      const response = await fetch(url)
+      return await response.json()
+    } catch (err) {
+      return console.log("Problem with fetch:" + err)
+    }
+  }
+  
   /**
    * Applique les bonnes dimensions aux éléments du carrousel
    */
@@ -94,8 +124,10 @@ class Carousel {
 document.addEventListener("DOMContentLoaded", function () {
   
   new Carousel(document.querySelector("#carousel1"), {
-    slidesVisible: 2,
+    slidesVisible: 5,
     slidesToScroll:2,
+    pageNumberAPI: 1,
+    moviePositionAPI: 1,
     infinite: true
   })
   
