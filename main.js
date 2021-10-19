@@ -40,9 +40,8 @@ class Carousel {
               children[iSlide] = this.setItem(value2, iSlide, 5)
               if (iSlide == this.options.slidesVisible - 1) {
                 this.setInstanceCarousel(children)
-            }
-            }
-            if (iSlide + this.options.moviePositionAPI >= 10) {
+              }
+            }else if (iSlide + this.options.moviePositionAPI >= 10) {
               this.callFetch(value2.next).then(value3 => {
                 children[iSlide] = this.setItem(value3, iSlide, 10)
                 if (iSlide == this.options.slidesVisible - 1) {
@@ -99,6 +98,7 @@ class Carousel {
     let child = this.createDivWithClass("item")
     let grandChild = child.appendChild(this.createDivWithClass("item__image"))
     let newPicture = document.createElement("img")
+    console.log(iSlide, this.options.moviePositionAPI, removal)
     newPicture.src = value.results[iSlide + this.options.moviePositionAPI - removal].image_url
     grandChild.appendChild(newPicture)
     return child
@@ -124,12 +124,12 @@ class Carousel {
   }
 
   next () {
-    this.gotoItem(this.moviePositionAPI + this.options.slidesToScroll)
+    this.gotoItem(this.options.moviePositionAPI + this.options.slidesToScroll)
 
   }
 
   prev () {
-    this.gotoItem(this.moviePositionAPI - this.options.slidesToScroll)
+    this.gotoItem(this.options.moviePositionAPI - this.options.slidesToScroll)
   }
 
   /**
@@ -137,10 +137,18 @@ class Carousel {
    * @param {number} index 
    */
   gotoItem (index) {
-    
+    this.options.moviePositionAPI = index
+    if (this.options.moviePositionAPI > 4) {
+      this.callFetch(this.options.url).then(value => {
+        this.options.url = value.next
+        this.options.moviePositionAPI = this.options.moviePositionAPI - 5
+      })
+    }
+    document.querySelector(".carousel").remove()
+    this.showCurrentItems()
     let translateX = index * -100 / this.items.length
     this.container.style.transform = "translate3d(" + translateX + "%, 0, 0)"
-    this.currentItem = index
+    //this.currentItem = index
   }
 
   /**
@@ -159,11 +167,10 @@ class Carousel {
 document.addEventListener("DOMContentLoaded", function () {
   
   new Carousel(document.querySelector("#carousel1"), {
-    slidesVisible: 15,
-    slidesToScroll: 2,
+    slidesVisible: 7,
+    slidesToScroll: 5,
     pageNumberAPI: 1,
-    moviePositionAPI: 0,
-    infinite: true
+    moviePositionAPI: 0
   })
   
 })
