@@ -6,45 +6,34 @@ class Carousel {
    * @param {Object} options 
    * @param {Object} [options.slidesToScroll=1] Nombre d'éléments à faire défiler
    * @param {Object} [options.slidesVisible=1] Nombre d'éléments visible dans un slide
-   * @param {Object} [options.url="http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes"] url API
-   * @param {Object} [options.pageNumberAPI=1] Numéro de page de la requête API
-   * @param {Object} [options.moviePositionAPI=0] Position du film au niveau de la page
+   * @param {Object} [options.url="http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes"] Requête URL
+   * @param {Object} [options.startPosition=0] Position du 1er élément qui doit être retourné par la requête API
    */
   constructor (element, options = {}) {
     this.element = element
     this.options = Object.assign({}, {
-      slidesToScroll: 1,
-      slidesVisible: 1,
+      slidesToScroll: 2,
+      slidesVisible: 4,
       url: "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes",
-      pageNumberAPI: 1,
-      moviePositionAPI: 0
+      startPosition: 0
     }, options)
-    this.showCurrentItems()
-    }
-
-  /**
-   * Renvoie les films à afficher
-   */
-  showCurrentItems() {
     this.callFetch(this.options.url).then(value => {
       let children = []
-      for (let iSlide = 0; iSlide < this.options.slidesVisible; iSlide++) {
-        if (iSlide + this.options.moviePositionAPI < 5) {
+      for (let iSlide = 0; iSlide < 7; iSlide++) {
+        console.log(iSlide)
+        if (iSlide + this.options.startPosition < 5) {
           children[iSlide] = this.setItem(value, iSlide, 0)
-          if (iSlide == this.options.slidesVisible - 1) {
-            this.setInstanceCarousel(children)
-          }
         } else {
           this.callFetch(value.next).then(value2 => {
-            if (iSlide + this.options.moviePositionAPI < 10) {
+            if (iSlide + this.options.startPosition < 10) {
               children[iSlide] = this.setItem(value2, iSlide, 5)
-              if (iSlide == this.options.slidesVisible - 1) {
+              if (iSlide == 6) {
                 this.setInstanceCarousel(children)
               }
-            }else if (iSlide + this.options.moviePositionAPI >= 10) {
+            }else {
               this.callFetch(value2.next).then(value3 => {
                 children[iSlide] = this.setItem(value3, iSlide, 10)
-                if (iSlide == this.options.slidesVisible - 1) {
+                if (iSlide == 6) {
                   this.setInstanceCarousel(children)
                 }
             })
@@ -55,6 +44,8 @@ class Carousel {
       }
     })
   }
+
+  
   /**
    * 
    * @param {string} url 
@@ -68,11 +59,12 @@ class Carousel {
       return console.log("Problem with fetch:" + err)
     }
   }
-
+  
   /**
    * Affiche le carrousel qui a été chargé
    */
-  setInstanceCarousel(children) {
+   setInstanceCarousel(children) {
+    this.currentItem = 0
     this.root = this.createDivWithClass("carousel")
     this.container = this.createDivWithClass("carousel__container")
     this.root.appendChild(this.container)
@@ -98,8 +90,7 @@ class Carousel {
     let child = this.createDivWithClass("item")
     let grandChild = child.appendChild(this.createDivWithClass("item__image"))
     let newPicture = document.createElement("img")
-    console.log(iSlide, this.options.moviePositionAPI, removal)
-    newPicture.src = value.results[iSlide + this.options.moviePositionAPI - removal].image_url
+    newPicture.src = value.results[iSlide + this.options.startPosition - removal].image_url
     grandChild.appendChild(newPicture)
     return child
   }
@@ -120,16 +111,15 @@ class Carousel {
     this.root.appendChild(prevButton)
     nextButton.addEventListener("click", this.next.bind(this))
     prevButton.addEventListener("click", this.prev.bind(this))
-
   }
 
   next () {
-    this.gotoItem(this.options.moviePositionAPI + this.options.slidesToScroll)
+    this.gotoItem(this.currentItem + this.options.slidesToScroll)
 
   }
 
   prev () {
-    this.gotoItem(this.options.moviePositionAPI - this.options.slidesToScroll)
+    this.gotoItem(this.currentItem - this.options.slidesToScroll)
   }
 
   /**
@@ -137,18 +127,14 @@ class Carousel {
    * @param {number} index 
    */
   gotoItem (index) {
-    this.options.moviePositionAPI = index
-    if (this.options.moviePositionAPI > 4) {
-      this.callFetch(this.options.url).then(value => {
-        this.options.url = value.next
-        this.options.moviePositionAPI = this.options.moviePositionAPI - 5
-      })
+    if (index < 0) {
+      index = 3
+    } else if (index >= 4) {
+      index = 0
     }
-    document.querySelector(".carousel").remove()
-    this.showCurrentItems()
     let translateX = index * -100 / this.items.length
     this.container.style.transform = "translate3d(" + translateX + "%, 0, 0)"
-    //this.currentItem = index
+    this.currentItem = index
   }
 
   /**
@@ -167,10 +153,9 @@ class Carousel {
 document.addEventListener("DOMContentLoaded", function () {
   
   new Carousel(document.querySelector("#carousel1"), {
-    slidesVisible: 7,
-    slidesToScroll: 5,
-    pageNumberAPI: 1,
-    moviePositionAPI: 0
+    slidesVisible: 4,
+    slidesToScroll: 1,
+    startPosition: 1
   })
   
 })
