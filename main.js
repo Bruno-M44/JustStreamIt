@@ -8,6 +8,7 @@ class Carousel {
    * @param {Object} [options.slidesVisible=1] Nombre d'éléments visible dans un slide
    * @param {Object} [options.url="http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes"] Requête URL
    * @param {Object} [options.startPosition=0] Position du 1er élément qui doit être retourné par la requête API
+   * @param {Object} [option.headliner=False] Afficher un film en en-tête
    */
   constructor (element, options = {}) {
     this.element = element
@@ -15,12 +16,31 @@ class Carousel {
       slidesToScroll: 2,
       slidesVisible: 4,
       url: "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes",
-      startPosition: 0
+      startPosition: 0,
+      headliner: false
     }, options)
     this.callFetch(this.options.url).then(value => {
+      if (this.options.headliner) {
+        this.callFetch(value.results[0].url).then(value2 => {
+          let headliner = document.querySelector("#best_movie")
+
+          let newPicture = document.createElement("img")
+          newPicture.src = value2.image_url
+          headliner.appendChild(newPicture)
+
+          let title = document.createElement("h2")
+          title.textContent = value2.title
+          headliner.appendChild(title)
+
+          let button = document.createElement("button")
+          button.textContent = "Détails"
+          headliner.appendChild(button)
+          this.modalBtn(button, value2)
+        })
+      }
+  
       let children = []
       for (let iSlide = 0; iSlide < 7; iSlide++) {
-        console.log(iSlide)
         if (iSlide + this.options.startPosition < 5) {
           children[iSlide] = this.setItem(value, iSlide, 0)
         } else {
@@ -28,7 +48,8 @@ class Carousel {
             if (iSlide + this.options.startPosition < 10) {
               children[iSlide] = this.setItem(value2, iSlide, 5)
               if (iSlide == 6) {
-                this.setInstanceCarousel(children)
+                this.setInstanceCarousel(children)  
+                this.modal()
               }
             }else {
               this.callFetch(value2.next).then(value3 => {
@@ -89,6 +110,7 @@ class Carousel {
   setItem (value, iSlide, removal) {
     let child = this.createDivWithClass("item")
     let grandChild = child.appendChild(this.createDivWithClass("item__image"))
+    grandChild.id = value.results[iSlide + this.options.startPosition - removal].id
     let newPicture = document.createElement("img")
     newPicture.src = value.results[iSlide + this.options.startPosition - removal].image_url
     grandChild.appendChild(newPicture)
@@ -109,6 +131,7 @@ class Carousel {
     let prevButton = this.createDivWithClass("carousel__prev")
     this.root.appendChild(nextButton)
     this.root.appendChild(prevButton)
+
     nextButton.addEventListener("click", this.next.bind(this))
     prevButton.addEventListener("click", this.prev.bind(this))
   }
@@ -148,125 +171,186 @@ class Carousel {
     return div
 
   }
-}
 
-document.addEventListener("DOMContentLoaded", function () {
-  
-  new Carousel(document.querySelector("#carousel1"), {
-    slidesVisible: 4,
-    slidesToScroll: 1,
-    startPosition: 1
-  })
-  
-})
-
-
-
-
-/*
-function callFetch(url) {
-    return fetch(url)
-    .then(response => {return response.json()})
-    .catch(err => console.log("Problem with fetch:" + err))
-  }
-
-function showBestMovie(url) {
-  bestMovies = callFetch(url)
-  bestMovies.then(value => {
-    let divBestMovie = document.getElementById("bestMovie");
-
-    let newPicture = document.createElement("img")
-    newPicture.src = value.results[0].image_url
-    divBestMovie.appendChild(newPicture)
-
-    let newEltTitle = document.createElement("h3")
-    let newContentTitle = document.createTextNode(value.results[0].title)
-    newEltTitle.appendChild(newContentTitle)
-    divBestMovie.appendChild(newEltTitle)
-
-    let newButton = document.createElement("button")
-    newButton.value = "Détails"
-    divBestMovie.appendChild(newButton)
-
-    let newEltDescription = document.createElement("p")
-    bestMovie = callFetch(value.results[0].url)
-    bestMovie.then(value => {
-      let newContentDescription = document.createTextNode(value.description);
-      newEltDescription.appendChild(newContentDescription)
-      divBestMovie.appendChild(newEltDescription)
-    })
-  })
-}
-
-function showBestMovies(url) {
-  bestMovies = callFetch(url)
-  bestMovies.then(value => {
-    let divBestMovies = document.getElementById("bestMovies");
-    if (value.previous == null) { //1st page
-      for (let iMovie = 1; iMovie < 8; iMovie++) {
-        if (iMovie < 5) {
-          let newPicture = document.createElement("img")
-          newPicture.src = value.results[iMovie].image_url
-          divBestMovies.appendChild(newPicture)
-        } else {
-          url = value.next
-          bestMovies = callFetch(url)
-          bestMovies.then(value => {
+  /**
+   * Ouverture de la fenêtre modale du film sélectionné
+   */
+  modal () {
+    let thisUpper = this
+    let modal = document.querySelector("aside")
+    let items = document.querySelectorAll(".item")
+      for (let iItem = 0; iItem < items.length; iItem++) {
+        items[iItem].onclick = function() {
+          let modalContent = document.createElement("div")
+          modalContent.classList.add("modal-content")
+          let url = "http://localhost:8000/api/v1/titles/" + items[iItem].children[0].id
+          thisUpper.callFetch(url).then(value => {
+            let closeButton = document.createElement("span")
+            closeButton.classList.add("close")
+            closeButton.textContent = "x"
+            modalContent.appendChild(closeButton)
+            
             let newPicture = document.createElement("img")
-            newPicture.src = value.results[iMovie - 5].image_url
-            divBestMovies.appendChild(newPicture)
+            newPicture.src = value.image_url
+            modalContent.appendChild(newPicture)
+
+            let title = document.createElement("h2")
+            title.textContent = value.title
+            modalContent.appendChild(title)
+
+            let genres = document.createElement("p")
+            genres.textContent = "Genres : " + value.genres
+            modalContent.appendChild(genres)
+
+            let datePublished = document.createElement("p")
+            datePublished.textContent = "Date de sortie : " + value.date_published
+            modalContent.appendChild(datePublished)
+
+            let rated = document.createElement("p")
+            rated.textContent = "Classification : " + value.rated
+            modalContent.appendChild(rated)
+
+            let imdbScore = document.createElement("p")
+            imdbScore.textContent = "Score IMDB : " + value.imdb_score
+            modalContent.appendChild(imdbScore)
+
+            let directors = document.createElement("p")
+            directors.textContent = "Réalisateur : " + value.directors
+            modalContent.appendChild(directors)
+
+            let actors = document.createElement("p")
+            actors.textContent = "Acteurs : " + value.actors
+            modalContent.appendChild(actors)
+
+            let duration = document.createElement("p")
+            duration.textContent = "Durée (min) : " + value.duration
+            modalContent.appendChild(duration)
+
+            let countries = document.createElement("p")
+            countries.textContent = "Pays : " + value.countries
+            modalContent.appendChild(countries)
+
+            let worldwideGrossIncome = document.createElement("p")
+            worldwideGrossIncome.textContent = "Résultat au box-office : " + value.worldwide_gross_income
+            modalContent.appendChild(worldwideGrossIncome)
+
+            let longDescription = document.createElement("p")
+            longDescription.textContent = "Résumé : " + value.long_description
+            modalContent.appendChild(longDescription)
+
+            modal.appendChild(modalContent)
+
+            modal.style.display = "block" 
+
+            closeButton.onclick = function() {
+              modal.style.display = "none"
+              while (modal.firstChild) {
+                modal.removeChild(modal.firstChild)
+              }
+            } 
         })
       }
     }
-    } else {
-      let lastPicture = document.querySelectorAll("#bestMovies img")[document.
-        querySelectorAll("#bestMovies img").length - 1].src
-      let startWriting = false
-      let iMovie = 0
-      while (document.querySelectorAll("#bestMovies img").length < 8 || startWriting == false)
-      {
-        if (startWriting == true) {
-          let newPicture = document.createElement("img")
-          newPicture.src = value.results[iMovie].image_url
-          divBestMovies.appendChild(newPicture)
-        }
-        if (lastPicture == value.results[iMovie].image_url) {
-          startWriting = true
-          divBestMovies.innerHTML = ""
-        }
-        iMovie += 1
-        if (iMovie > 4) {
-          url = value.next
-          bestMovies = callFetch(url)
-          iMovie = 0
-        } 
+  }
+
+  modalBtn (element, value) {
+    let modal = document.querySelector("aside")
+    element.onclick = function() {
+    let modalContent = document.createElement("div")
+    modalContent.classList.add("modal-content")
+
+    let closeButton = document.createElement("span")
+    closeButton.classList.add("close")
+    closeButton.textContent = "x"
+    modalContent.appendChild(closeButton)
+            
+    let newPicture = document.createElement("img")
+    newPicture.src = value.image_url
+    modalContent.appendChild(newPicture)
+
+    let title = document.createElement("h2")
+    title.textContent = value.title
+    modalContent.appendChild(title)
+
+    let genres = document.createElement("p")
+    genres.textContent = "Genres : " + value.genres
+    modalContent.appendChild(genres)
+
+    let datePublished = document.createElement("p")
+    datePublished.textContent = "Date de sortie : " + value.date_published
+    modalContent.appendChild(datePublished)
+
+    let rated = document.createElement("p")
+    rated.textContent = "Classification : " + value.rated
+    modalContent.appendChild(rated)
+
+    let imdbScore = document.createElement("p")
+    imdbScore.textContent = "Score IMDB : " + value.imdb_score
+    modalContent.appendChild(imdbScore)
+
+    let directors = document.createElement("p")
+    directors.textContent = "Réalisateur : " + value.directors
+    modalContent.appendChild(directors)
+
+    let actors = document.createElement("p")
+    actors.textContent = "Acteurs : " + value.actors
+    modalContent.appendChild(actors)
+
+    let duration = document.createElement("p")
+    duration.textContent = "Durée (min) : " + value.duration
+    modalContent.appendChild(duration)
+
+    let countries = document.createElement("p")
+    countries.textContent = "Pays : " + value.countries
+    modalContent.appendChild(countries)
+
+    let worldwideGrossIncome = document.createElement("p")
+    worldwideGrossIncome.textContent = "Résultat au box-office : " + value.worldwide_gross_income
+    modalContent.appendChild(worldwideGrossIncome)
+
+    let longDescription = document.createElement("p")
+    longDescription.textContent = "Résumé : " + value.long_description
+    modalContent.appendChild(longDescription)
+
+    modal.appendChild(modalContent)
+
+    modal.style.display = "block" 
+
+    closeButton.onclick = function() {
+      modal.style.display = "none"
+      while (modal.firstChild) {
+        modal.removeChild(modal.firstChild)
       }
-
+    }  
     }
-})
+  }
 }
 
-let url = "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes"
-showBestMovie(url)
-showBestMovies(url)
+document.addEventListener("DOMContentLoaded", function () {
 
-
-
-
-
-/*
-var nextBestMovies = document.getElementById("nextBestMovies")
-console.log(nextBestMovies)
-nextBestMovies.addEventListener("click", function() {
-  console.log("toto")
-})
-
-
-function showNextBestMovies() {
-  nextURL = callFetch(url)
-  nextURL.then(value => {
-    showBestMovies(value.next)
+  new Carousel(document.querySelector("#top_rated_movies"), {
+    slidesVisible: 4,
+    slidesToScroll: 1,
+    startPosition: 1,
+    headliner: true
   })
-}
 
-*/
+  new Carousel(document.querySelector("#top_rated_action_movies"), {
+    slidesVisible: 4,
+    slidesToScroll: 1,
+    url: "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes&genre=Action"
+  })
+
+  new Carousel(document.querySelector("#top_rated_adventure_movies"), {
+    slidesVisible: 4,
+    slidesToScroll: 1,
+    url: "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes&genre=Adventure"
+  })
+
+  new Carousel(document.querySelector("#top_rated_sci-fi_movies"), {
+    slidesVisible: 4,
+    slidesToScroll: 1,
+    url: "http://localhost:8000/api/v1/titles/?sort_by=-imdb_score,-votes&genre=Sci-Fi"
+  })
+  
+})
