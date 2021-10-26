@@ -168,7 +168,7 @@ CARROUSEL
   height: 90%; /* Full height */
   overflow: auto; /* Enable scroll if needed */
   /*background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(255, 255, 255, 0.6); /* Black w/ opacity */
+  background-color: rgba(255, 255, 255, 1); /* Black w/ opacity */
 }
 
 /* Modal Content */
