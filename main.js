@@ -24,18 +24,26 @@ class Carousel {
         this.callFetch(value.results[0].url).then(value2 => {
           let headliner = document.querySelector("#best_movie")
 
-          let newPicture = document.createElement("img")
-          newPicture.src = value2.image_url
-          headliner.appendChild(newPicture)
-
+          let leftBlock = document.createElement("div")
+          leftBlock.classList.add("left_block")
+          
           let title = document.createElement("h2")
           title.textContent = value2.title
-          headliner.appendChild(title)
+          leftBlock.appendChild(title)
 
           let button = document.createElement("button")
-          button.textContent = "Détails"
-          headliner.appendChild(button)
+          button.textContent = "Play"
+          leftBlock.appendChild(button)
+          headliner.appendChild(leftBlock)
           this.modalBtn(button, value2)
+
+          let rightBlock = document.createElement("div")
+          rightBlock.classList.add("right_block")
+          
+          let newPicture = document.createElement("img")
+          newPicture.src = value2.image_url
+          rightBlock.appendChild(newPicture)
+          headliner.appendChild(rightBlock)
         })
       }
   
@@ -194,7 +202,7 @@ class Carousel {
             newPicture.src = value.image_url
             modalContent.appendChild(newPicture)
 
-            let title = document.createElement("h2")
+            let title = document.createElement("h3")
             title.textContent = value.title
             modalContent.appendChild(title)
 
@@ -268,7 +276,7 @@ class Carousel {
     newPicture.src = value.image_url
     modalContent.appendChild(newPicture)
 
-    let title = document.createElement("h2")
+    let title = document.createElement("h3")
     title.textContent = value.title
     modalContent.appendChild(title)
 
